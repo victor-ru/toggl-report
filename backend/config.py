@@ -11,3 +11,6 @@ END_OF_NIGHT_HOUR = int(os.getenv("END_OF_NIGHT_HOUR", 0))
 
 # HOURLY_RATE is used to calculate billed amounts
 HOURLY_RATE = int(os.getenv("HOURLY_RATE"))
+
+# START_DATE defines minimum allowed toggl query date (optional)
+START_DATE = os.getenv("START_DATE")

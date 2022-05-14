@@ -7,6 +7,7 @@ from config import (
     TOGGL_WORKSPACE_ID,
     END_OF_NIGHT_HOUR,
     HOURLY_RATE,
+    START_DATE,
 )
 from datetime import datetime, timedelta
 import math
@@ -160,6 +161,11 @@ def main(client_name=None):
     # get date range from the query
     since = request.args.get("since")
     until = request.args.get("until")
+
+    # since and until can not be greater than START_DATE
+    if START_DATE:
+        since = max(since, START_DATE)
+        until = max(until, START_DATE)
 
     if since is None or until is None:
         abort(400, description="Parameters must be passed in the URL: since, until")
