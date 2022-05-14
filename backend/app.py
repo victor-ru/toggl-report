@@ -161,6 +161,9 @@ def main(client_name=None):
     since = request.args.get("since")
     until = request.args.get("until")
 
+    if since is None or until is None:
+        abort(400, description="Parameters must be passed in the URL: since, until")
+
     # get client id from config and load time entries from toggl api
     client_id = TOGGL_CLIENT_IDS[client_name]
     time_entries = get_time_entries(client_id, since, until)
