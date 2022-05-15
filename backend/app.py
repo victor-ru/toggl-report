@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, abort, request
+from flask import Flask, jsonify, abort, request, render_template
 import requests
 from requests.auth import HTTPBasicAuth
 from config import (
@@ -148,8 +148,8 @@ def process_time_entries(time_entries, since, until):
     return result
 
 
-@app.route("/<string:client_name>")
-def main(client_name=None):
+@app.route("/api/<string:client_name>")
+def api(client_name=None):
     # client name must be passed
     if client_name is None:
         abort(404)
@@ -177,3 +177,8 @@ def main(client_name=None):
     processed_time_entries = process_time_entries(time_entries, since, until)
 
     return jsonify(processed_time_entries)
+
+
+@app.route("/<string:client_name>")
+def index(client_name):
+    return render_template("index.html")

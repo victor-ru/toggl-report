@@ -49,6 +49,11 @@ export default function App() {
 
   useEffect(() => {
     const load = async () => {
+      const pathname = window.location.pathname;
+      if (pathname === "/") {
+        return;
+      }
+
       const params = {
         since: formatISO(since, {
           representation: "date",
@@ -60,7 +65,9 @@ export default function App() {
 
       setTimeEntries([]);
       setLoading(true);
-      const response = await axios.get(window.location.pathname, { params });
+
+      const url = `/api${pathname}`;
+      const response = await axios.get(url, { params });
       setTimeEntries(response.data);
       setLoading(false);
     };
