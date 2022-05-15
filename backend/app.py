@@ -182,6 +182,6 @@ def api(toggl_client_id=None, client_name=None):
     return jsonify(processed_time_entries)
 
 
-@app.route("/<string:client_name>")
-def index(client_name):
+@app.route("/<int:toggl_client_id>/<string:client_name>")
+def index(**_):
     return render_template("index.html")
