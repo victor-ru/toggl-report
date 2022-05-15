@@ -22,6 +22,7 @@ export function DateRangePicker({
   return (
     <LocalizationProvider dateAdapter={AdapterDateFns}>
       <DatePicker
+        disableHighlightToday
         open={sinceOpen}
         onOpen={() => setSinceOpen(true)}
         onClose={() => setSinceOpen(false)}
@@ -49,6 +50,7 @@ export function DateRangePicker({
         )}
       />
       <DatePicker
+        disableHighlightToday
         open={untilOpen}
         onOpen={() => setUntilOpen(true)}
         onClose={() => setUntilOpen(false)}
