@@ -10,6 +10,7 @@ import {
   subMonths,
   startOfMonth,
   endOfMonth,
+  endOfDay,
   isEqual,
 } from "date-fns";
 import { DateRangePicker } from "./components/DateRangePicker";
@@ -115,7 +116,7 @@ export default function App() {
             since={since}
             until={until}
             onChangeSince={setSince}
-            onChangeUntil={setUntil}
+            onChangeUntil={(newUntil) => setUntil(endOfDay(newUntil))}
           />
           <Button
             variant={thisWeekActive ? "contained" : "outlined"}
