@@ -148,14 +148,18 @@ def process_time_entries(time_entries, since, until):
     return result
 
 
-@app.route("/api/<string:client_name>")
-def api(client_name=None):
-    # client name must be passed
-    if client_name is None:
+@app.route("/api/<int:toggl_client_id>/<string:client_name>")
+def api(toggl_client_id=None, client_name=None):
+    # client name and toggl client id must be passed
+    if toggl_client_id is None or client_name is None:
         abort(404)
 
     # client name must exist in the config
     if client_name not in TOGGL_CLIENT_IDS:
+        abort(404)
+
+    # client name must match toggl client_id
+    if TOGGL_CLIENT_IDS[client_name] != toggl_client_id:
         abort(404)
 
     # get date range from the query
@@ -171,8 +175,7 @@ def api(client_name=None):
         abort(400, description="Parameters must be passed in the URL: since, until")
 
     # get client id from config and load time entries from toggl api
-    client_id = TOGGL_CLIENT_IDS[client_name]
-    time_entries = get_time_entries(client_id, since, until)
+    time_entries = get_time_entries(toggl_client_id, since, until)
 
     processed_time_entries = process_time_entries(time_entries, since, until)
 
