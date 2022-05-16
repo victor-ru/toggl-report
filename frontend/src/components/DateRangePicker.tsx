@@ -4,6 +4,7 @@ import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import { useState } from "react";
+import locale from "date-fns/locale/en-GB";
 
 export function DateRangePicker({
   since,
@@ -20,9 +21,10 @@ export function DateRangePicker({
   const [untilOpen, setUntilOpen] = useState<boolean>(false);
 
   return (
-    <LocalizationProvider dateAdapter={AdapterDateFns}>
+    <LocalizationProvider dateAdapter={AdapterDateFns} locale={locale}>
       <DatePicker
         disableHighlightToday
+        inputFormat="yyyy-MM-dd"
         open={sinceOpen}
         onOpen={() => setSinceOpen(true)}
         onClose={() => setSinceOpen(false)}
@@ -51,6 +53,7 @@ export function DateRangePicker({
       />
       <DatePicker
         disableHighlightToday
+        inputFormat="yyyy-MM-dd"
         open={untilOpen}
         onOpen={() => setUntilOpen(true)}
         onClose={() => setUntilOpen(false)}
