@@ -12,6 +12,7 @@ import {
   endOfMonth,
   endOfDay,
   isEqual,
+  parseISO,
 } from "date-fns";
 import { DateRangePicker } from "./components/DateRangePicker";
 import { TimeTable, TimeEntry } from "./components/TimeTable";
@@ -43,10 +44,19 @@ export default function App() {
   const lastMonthStart = startOfMonth(monthAgo);
   const lastMonthEnd = endOfMonth(monthAgo);
 
+  // get `since` and `until` from the query parameters
+  const urlSearchParamsObj = new URLSearchParams(window.location.search);
+  const urlSearchParams = Object.fromEntries(urlSearchParamsObj.entries());
+  const { since: sinceParam, until: untilParam } = urlSearchParams;
+  const initialSince = sinceParam ? parseISO(sinceParam) : thisWeekStart;
+  const initialUntil = untilParam
+    ? endOfDay(parseISO(untilParam))
+    : thisWeekEnd;
+
   const [loading, setLoading] = useState<boolean>(true);
   const [timeEntries, setTimeEntries] = useState<TimeEntry[]>([]);
-  const [since, setSince] = useState<Date>(thisWeekStart);
-  const [until, setUntil] = useState<Date>(thisWeekEnd);
+  const [since, setSince] = useState<Date>(initialSince);
+  const [until, setUntil] = useState<Date>(initialUntil);
 
   useEffect(() => {
     const load = async () => {
@@ -63,6 +73,11 @@ export default function App() {
           representation: "date",
         }),
       };
+
+      // save `since` and `until` to the query parameters
+      var searchParams = new URLSearchParams(params);
+      var newUrl = `${window.location.pathname}?${searchParams.toString()}`;
+      window.history.pushState(null, "", newUrl);
 
       setTimeEntries([]);
       setLoading(true);
