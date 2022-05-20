@@ -1,6 +1,6 @@
 import * as React from "react";
 import { Button, Container, Typography, Box } from "@mui/material";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import axios from "axios";
 import {
   startOfWeek,
@@ -13,9 +13,11 @@ import {
   endOfDay,
   isEqual,
   parseISO,
+  endOfYesterday,
 } from "date-fns";
 import { DateRangePicker } from "./components/DateRangePicker";
 import { TimeTable, TimeEntry } from "./components/TimeTable";
+import { useConfirm } from "material-ui-confirm";
 
 // weeks start on monday
 const WEEK_START_DAY = 1;
@@ -58,38 +60,40 @@ export default function App() {
   const [since, setSince] = useState<Date>(initialSince);
   const [until, setUntil] = useState<Date>(initialUntil);
 
-  useEffect(() => {
-    const load = async () => {
-      const pathname = window.location.pathname;
-      if (pathname === "/") {
-        return;
-      }
+  const confirm = useConfirm();
 
-      const params = {
-        since: formatISO(since, {
-          representation: "date",
-        }),
-        until: formatISO(until, {
-          representation: "date",
-        }),
-      };
+  const loadTimeEntries = useCallback(async () => {
+    const pathname = window.location.pathname;
+    if (pathname === "/") {
+      return;
+    }
 
-      // save `since` and `until` to the query parameters
-      var searchParams = new URLSearchParams(params);
-      var newUrl = `${window.location.pathname}?${searchParams.toString()}`;
-      window.history.pushState(null, "", newUrl);
-
-      setTimeEntries([]);
-      setLoading(true);
-
-      const url = `/api${pathname}`;
-      const response = await axios.get(url, { params });
-      setTimeEntries(response.data);
-      setLoading(false);
+    const params = {
+      since: formatISO(since, {
+        representation: "date",
+      }),
+      until: formatISO(until, {
+        representation: "date",
+      }),
     };
 
-    load();
+    // save `since` and `until` to the query parameters
+    const searchParams = new URLSearchParams(params);
+    const newUrl = `${window.location.pathname}?${searchParams.toString()}`;
+    window.history.pushState(null, "", newUrl);
+
+    setTimeEntries([]);
+    setLoading(true);
+
+    const url = `/api${pathname}`;
+    const response = await axios.get(url, { params });
+    setTimeEntries(response.data);
+    setLoading(false);
   }, [since, until]);
+
+  useEffect(() => {
+    loadTimeEntries();
+  }, [loadTimeEntries]);
 
   const handleClickThisWeek = () => {
     setSince(thisWeekStart);
@@ -119,6 +123,53 @@ export default function App() {
     isEqual(since, thisMonthStart) && isEqual(until, thisMonthEnd);
   const lastMonthActive =
     isEqual(since, lastMonthStart) && isEqual(until, lastMonthEnd);
+
+  // if there are not time entries to be paid, the payment button will be disabled
+  const totalDue = timeEntries.reduce((res, row) => {
+    return res + row.due_amount;
+  }, 0);
+
+  // payments can only be made for dates before yesterday
+  // so that incomplete days are not marked as paid
+  const datesAllowPayment = since < until && until < endOfYesterday();
+
+  // payment button caption displays additional information below the button
+  let paymentButtonCaption = `Payment amount is $${totalDue.toFixed(2)}`;
+  if (totalDue === 0) {
+    paymentButtonCaption = "No payment required";
+  }
+  if (!datesAllowPayment) {
+    paymentButtonCaption = `Only dates before ${formatISO(endOfYesterday(), {
+      representation: "date",
+    })} can be marked as payed`;
+  }
+
+  // disabled the payment button if a payment cannot be made
+  const paymentButtonDisabled = totalDue === 0 || !datesAllowPayment || loading;
+
+  const handleClickPaymentButton = async () => {
+    try {
+      await confirm({
+        description: (
+          <>
+            All the visible rows will be marked as paid
+            <br />
+            <br />
+            Total payment amount is <b>${totalDue.toFixed(2)}</b>
+          </>
+        ),
+      });
+
+      setTimeEntries([]);
+      setLoading(true);
+
+      const url = `/api/${window.location.pathname}${window.location.search}/set_paid`;
+      await axios.post(url);
+      loadTimeEntries();
+    } catch (_) {
+      return;
+    }
+  };
 
   return (
     <Container maxWidth="md">
@@ -166,6 +217,26 @@ export default function App() {
           </Button>
         </Box>
         <TimeTable loading={loading} rows={timeEntries} />
+        <Box
+          sx={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+          }}
+        >
+          <Button
+            onClick={handleClickPaymentButton}
+            sx={{ mb: 1 }}
+            color="success"
+            variant="contained"
+            disabled={paymentButtonDisabled}
+          >
+            Mark All As Paid
+          </Button>
+          {!loading && (
+            <Typography variant="body2">{paymentButtonCaption}</Typography>
+          )}
+        </Box>
       </Box>
     </Container>
   );

@@ -142,14 +142,29 @@ def process_time_entries(time_entries, since, until):
                 "description": row["description"],
                 "duration": duration,
                 "billed_amount": billed_amount,
+                "due_amount": 0 if "paid" in row["tags"] else billed_amount,
             }
         )
 
     return result
 
 
+# update_time_entries marks a time entries as paid
+def update_time_entries(ids):
+    joined_ids = ",".join(map(str, ids))
+    url = f"https://api.track.toggl.com/api/v8/time_entries/{joined_ids}"
+    auth = HTTPBasicAuth(TOGGL_API_KEY, "api_token")
+    response = requests.put(
+        url, json={"time_entry": {"tags": ["paid"], "tag_action": "add"}}, auth=auth
+    )
+    import logging
+
+    logging.error(response.json())
+
+
 @app.route("/api/<int:toggl_client_id>/<string:client_name>")
-def api(toggl_client_id=None, client_name=None):
+@app.route("/api/<int:toggl_client_id>/<string:client_name>/<string:action>")
+def api(toggl_client_id=None, client_name=None, action=None):
     # client name and toggl client id must be passed
     if toggl_client_id is None or client_name is None:
         abort(404)
@@ -176,6 +191,12 @@ def api(toggl_client_id=None, client_name=None):
 
     # get client id from config and load time entries from toggl api
     time_entries = get_time_entries(toggl_client_id, since, until)
+
+    if action == "set_paid":
+        ids = [time_entry["id"] for time_entry in time_entries]
+        update_time_entries(ids)
+
+        return jsonify({"success": True})
 
     processed_time_entries = process_time_entries(time_entries, since, until)
 

@@ -11,6 +11,7 @@ export interface TimeEntry {
   description: string;
   duration: number;
   billed_amount: number;
+  due_amount: number;
 }
 
 const columns: GridColDef[] = [
@@ -37,6 +38,14 @@ const columns: GridColDef[] = [
       return `$${params.value.toFixed(2)}`;
     },
   },
+  {
+    field: "due_amount",
+    headerName: "Due",
+    width: 80,
+    valueFormatter: (params: GridValueFormatterParams) => {
+      return `$${params.value.toFixed(2)}`;
+    },
+  },
 ];
 
 export function TimeTable({
@@ -50,6 +59,7 @@ export function TimeTable({
     date: "Total:",
     duration: rows.reduce((res, row) => res + row["duration"], 0),
     billed_amount: rows.reduce((res, row) => res + row["billed_amount"], 0),
+    due_amount: rows.reduce((res, row) => res + row["due_amount"], 0),
   };
 
   return (
