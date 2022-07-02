@@ -148,12 +148,39 @@ export default function App() {
   const paymentButtonDisabled = totalDue === 0 || !datesAllowPayment || loading;
 
   const handleClickPaymentButton = async () => {
+    const items = timeEntries
+      .filter((row) => row.due_amount > 0)
+      .map((row) => `${row.project}: ${row.description}`);
+    const uniqueItems = [...new Set(items)];
+
     try {
       await confirm({
         description: (
           <>
             All the visible rows will be marked as paid
             <br />
+            <br />
+            Description:
+            <br />
+            <code
+              style={{
+                display: "block",
+                padding: 10,
+                border: "1px solid #ccc",
+                borderRadius: 5,
+                backgroundColor: "whitesmoke",
+                maxHeight: 150,
+                overflow: "auto",
+                fontSize: 12,
+              }}
+            >
+              {uniqueItems.map((item, index) => (
+                <>
+                  - {item}
+                  <br />
+                </>
+              ))}
+            </code>
             <br />
             Total payment amount is <b>${totalDue.toFixed(2)}</b>
           </>
