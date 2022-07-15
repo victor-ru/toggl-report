@@ -190,7 +190,7 @@ export default function App() {
       setTimeEntries([]);
       setLoading(true);
 
-      const url = `/api/${window.location.pathname}${window.location.search}/set_paid`;
+      const url = `/api${window.location.pathname}/set_paid${window.location.search}`;
       await axios.post(url);
       loadTimeEntries();
     } catch (_) {

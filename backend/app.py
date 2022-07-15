@@ -163,7 +163,9 @@ def update_time_entries(ids):
 
 
 @app.route("/api/<int:toggl_client_id>/<string:client_name>")
-@app.route("/api/<int:toggl_client_id>/<string:client_name>/<string:action>")
+@app.route(
+    "/api/<int:toggl_client_id>/<string:client_name>/<string:action>", methods=["POST"]
+)
 def api(toggl_client_id=None, client_name=None, action=None):
     # client name and toggl client id must be passed
     if toggl_client_id is None or client_name is None:
