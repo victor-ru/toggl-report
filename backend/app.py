@@ -2,11 +2,10 @@ from flask import Flask, jsonify, abort, request, render_template
 import requests
 from requests.auth import HTTPBasicAuth
 from config import (
-    TOGGL_CLIENT_IDS,
+    TOGGL_CLIENTS,
     TOGGL_API_KEY,
     TOGGL_WORKSPACE_ID,
     END_OF_NIGHT_HOUR,
-    HOURLY_RATE,
     START_DATE,
 )
 from datetime import datetime, timedelta
@@ -92,7 +91,7 @@ def get_duration(time_entries, date, description, project):
 
 
 # prepares time entries to be displayed
-def process_time_entries(time_entries, since, until):
+def process_time_entries(time_entries, hourly_rate, since, until):
     result = []
 
     processed_tasks = {}
@@ -129,7 +128,7 @@ def process_time_entries(time_entries, since, until):
         processed_tasks.setdefault(date_str, [])
         processed_tasks[date_str].append(row["description"])
 
-        billed_amount = round(HOURLY_RATE / 60 * duration, 2)
+        billed_amount = round(hourly_rate / 60 * duration, 2)
 
         # skip zero-length rows that appear when a task took less than 5 minutes
         if duration == 0:
@@ -172,11 +171,11 @@ def api(toggl_client_id=None, client_name=None, action=None):
         abort(404)
 
     # client name must exist in the config
-    if client_name not in TOGGL_CLIENT_IDS:
+    if client_name not in TOGGL_CLIENTS:
         abort(404)
 
     # client name must match toggl client_id
-    if TOGGL_CLIENT_IDS[client_name] != toggl_client_id:
+    if TOGGL_CLIENTS[client_name]["id"] != toggl_client_id:
         abort(404)
 
     # get date range from the query
@@ -200,7 +199,10 @@ def api(toggl_client_id=None, client_name=None, action=None):
 
         return jsonify({"success": True})
 
-    processed_time_entries = process_time_entries(time_entries, since, until)
+    hourly_rate = TOGGL_CLIENTS[client_name]["hourly_rate"]
+    processed_time_entries = process_time_entries(
+        time_entries, hourly_rate, since, until
+    )
 
     return jsonify(processed_time_entries)
 
