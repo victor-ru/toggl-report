@@ -10,6 +10,7 @@ from config import (
 )
 from datetime import datetime, timedelta
 import math
+import pytz
 
 app = Flask(__name__)
 
@@ -21,8 +22,23 @@ def get_time_entries(client_id, since, until):
     until += timedelta(days=1, hours=END_OF_NIGHT_HOUR)
     until = until.date().isoformat()
 
-    url = "https://api.track.toggl.com/reports/api/v2/details"
+    result = []
+    # get the current time entry
+    now = datetime.now().isoformat()
     auth = HTTPBasicAuth(TOGGL_API_KEY, "api_token")
+    if now < until:
+        url = "https://api.track.toggl.com/api/v9/me/time_entries/current"
+        current_entry = requests.get(url, auth=auth).json()
+        current_entry["end"] = datetime.now(pytz.utc).isoformat()
+        # fix api inconsistency
+        if current_entry["tags"] is None:
+            current_entry["tags"] = []
+        url = f"https://api.track.toggl.com/api/v9/workspaces/{TOGGL_WORKSPACE_ID}/projects/{current_entry['pid']}"
+        project = requests.get(url, auth=auth).json()
+        current_entry["project"] = project["name"]
+        result.append(current_entry)
+
+    url = "https://api.track.toggl.com/reports/api/v2/details"
     params = {
         "user_agent": "tracker_ui",
         "client_ids": client_id,
@@ -31,8 +47,6 @@ def get_time_entries(client_id, since, until):
         "until": until,
         "page": 1,
     }
-
-    result = []
     response = requests.get(url, params=params, auth=auth).json()
 
     if "data" not in response:
