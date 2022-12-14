@@ -29,14 +29,15 @@ def get_time_entries(client_id, since, until):
     if now < until:
         url = "https://api.track.toggl.com/api/v9/me/time_entries/current"
         current_entry = requests.get(url, auth=auth).json()
-        current_entry["end"] = datetime.now(pytz.utc).isoformat()
-        # fix api inconsistency
-        if current_entry["tags"] is None:
-            current_entry["tags"] = []
-        url = f"https://api.track.toggl.com/api/v9/workspaces/{TOGGL_WORKSPACE_ID}/projects/{current_entry['pid']}"
-        project = requests.get(url, auth=auth).json()
-        current_entry["project"] = project["name"]
-        result.append(current_entry)
+        if current_entry is not None:
+            current_entry["end"] = datetime.now(pytz.utc).isoformat()
+            # fix api inconsistency
+            if current_entry["tags"] is None:
+                current_entry["tags"] = []
+            url = f"https://api.track.toggl.com/api/v9/workspaces/{TOGGL_WORKSPACE_ID}/projects/{current_entry['pid']}"
+            project = requests.get(url, auth=auth).json()
+            current_entry["project"] = project["name"]
+            result.append(current_entry)
 
     url = "https://api.track.toggl.com/reports/api/v2/details"
     params = {
