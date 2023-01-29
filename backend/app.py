@@ -36,8 +36,9 @@ def get_time_entries(client_id, since, until):
                 current_entry["tags"] = []
             url = f"https://api.track.toggl.com/api/v9/workspaces/{TOGGL_WORKSPACE_ID}/projects/{current_entry['pid']}"
             project = requests.get(url, auth=auth).json()
-            current_entry["project"] = project["name"]
-            result.append(current_entry)
+            if project["client_id"] == client_id:
+                current_entry["project"] = project["name"]
+                result.append(current_entry)
 
     url = "https://api.track.toggl.com/reports/api/v2/details"
     params = {
