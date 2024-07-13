@@ -1,16 +1,17 @@
-from flask import Flask, jsonify, abort, request, render_template
+import math
+from datetime import datetime, timedelta
+
+import pytz
 import requests
-from requests.auth import HTTPBasicAuth
 from config import (
-    TOGGL_CLIENTS,
-    TOGGL_API_KEY,
-    TOGGL_WORKSPACE_ID,
     END_OF_NIGHT_HOUR,
     START_DATE,
+    TOGGL_API_KEY,
+    TOGGL_CLIENTS,
+    TOGGL_WORKSPACE_ID,
 )
-from datetime import datetime, timedelta
-import math
-import pytz
+from flask import Flask, abort, jsonify, render_template, request
+from requests.auth import HTTPBasicAuth
 
 app = Flask(__name__)
 
@@ -23,23 +24,8 @@ def get_time_entries(client_id, since, until):
     until = until.date().isoformat()
 
     result = []
-    # get the current time entry
-    now = datetime.now().isoformat()
-    auth = HTTPBasicAuth(TOGGL_API_KEY, "api_token")
-    if now < until:
-        url = "https://api.track.toggl.com/api/v9/me/time_entries/current"
-        current_entry = requests.get(url, auth=auth).json()
-        if current_entry is not None:
-            current_entry["end"] = datetime.now(pytz.utc).isoformat()
-            # fix api inconsistency
-            if current_entry["tags"] is None:
-                current_entry["tags"] = []
-            url = f"https://api.track.toggl.com/api/v9/workspaces/{TOGGL_WORKSPACE_ID}/projects/{current_entry['pid']}"
-            project = requests.get(url, auth=auth).json()
-            if project["client_id"] == client_id:
-                current_entry["project"] = project["name"]
-                result.append(current_entry)
 
+    auth = HTTPBasicAuth(TOGGL_API_KEY, "api_token")
     url = "https://api.track.toggl.com/reports/api/v2/details"
     params = {
         "user_agent": "tracker_ui",
@@ -65,61 +51,38 @@ def get_time_entries(client_id, since, until):
             response = requests.get(url, params=params, auth=auth).json()
             result.extend(response["data"])
 
+    # get the current time entry
+    now = datetime.now().isoformat()
+    if now < until:
+        url = "https://api.track.toggl.com/api/v9/me/time_entries/current"
+        current_entry = requests.get(url, auth=auth).json()
+        if current_entry is not None:
+            current_entry["end"] = datetime.now(pytz.utc).isoformat()
+            # fix api inconsistency
+            if current_entry["tags"] is None:
+                current_entry["tags"] = []
+            url = f"https://api.track.toggl.com/api/v9/workspaces/{TOGGL_WORKSPACE_ID}/projects/{current_entry['pid']}"
+            project = requests.get(url, auth=auth).json()
+            if project["client_id"] == client_id:
+                current_entry["project"] = project["name"]
+                result.append(current_entry)
+
     return result
 
 
-# returns the total amount of work on the task during the given day
-# the task is specified by its description and project name, which allows to avoid description collisions
-def get_duration(time_entries, date, description, project):
-    total_duration = 0
-    original_row = time_entries[0]
-    original_row_end = datetime.fromisoformat(original_row["end"])
-
-    # is_night_work is set to true if the time entry we are calculating duration for
-    # ended between midnight and `END_OF_NIGHT_HOUR`
-    is_night_work = original_row_end.hour < END_OF_NIGHT_HOUR
+# prepares time entries to be displayed
+def process_time_entries(time_entries, hourly_rate, until):
+    task_durations = {}
 
     for row in time_entries:
-        # skip rows with another description or another project
-        if row["description"] != description or row["project"] != project:
-            continue
-
         start_time = datetime.fromisoformat(row["start"])
         end_time = datetime.fromisoformat(row["end"])
 
-        # break the loop when the previous day is reached
-        end_date = end_time.date()
-        if end_date < date:
-            break
-
-        # if not is_night_work, break the loop when the first time entry from the previous work night was reached
-        if not is_night_work and end_time.hour < END_OF_NIGHT_HOUR:
-            break
-
-        # if is_night_work, break the loop when the first time entry from the previous work night was reached
-        if is_night_work and end_date == date and end_time.hour < END_OF_NIGHT_HOUR:
-            break
-
-        total_duration += (end_time - start_time).seconds / 60
-
-    # return the total number of minutes spent rounded to the nearest 10
-    return int(round(total_duration, -1))
-
-
-# prepares time entries to be displayed
-def process_time_entries(time_entries, hourly_rate, since, until):
-    result = []
-
-    processed_tasks = {}
-
-    for index, row in enumerate(time_entries):
-        end_time = datetime.fromisoformat(row["end"])
-        date = end_time.date()
-
+        # get the date of the time entry
         # use the previous date for work made at night
+        date = end_time.date()
         if end_time.hour < END_OF_NIGHT_HOUR:
             date = (end_time - timedelta(days=1)).date()
-
         date_str = date.isoformat()
 
         # skip rows that are out of the date range
@@ -127,39 +90,35 @@ def process_time_entries(time_entries, hourly_rate, since, until):
         if date_str > until and end_time.hour >= END_OF_NIGHT_HOUR:
             continue
 
-        # also ignore rows made earlier than `since`
-        if date_str < since:
-            continue
+        task_durations.setdefault(date_str, {})
+        task_durations[date_str].setdefault(row["project"], {})
+        task_durations[date_str][row["project"]].setdefault(row["description"], 0)
 
-        # ignore the row if it has been already processed
-        if (
-            date_str in processed_tasks
-            and row["description"] in processed_tasks[date_str]
-        ):
-            continue
+        duration = (end_time - start_time).seconds / 60
+        task_durations[date_str][row["project"]][row["description"]] += duration
 
-        duration = get_duration(
-            time_entries[index:], date, row["description"], row["project"]
-        )
-        processed_tasks.setdefault(date_str, [])
-        processed_tasks[date_str].append(row["description"])
+    result = []
+    for date_str, projects in task_durations.items():
+        for project, tasks in projects.items():
+            for description, duration in tasks.items():
+                rounded_duration = int(round(duration, -1))
 
-        billed_amount = round(hourly_rate / 60 * duration, 2)
+                # skip zero-length rows that appear when a task took less than 5 minutes
+                if rounded_duration == 0:
+                    continue
 
-        # skip zero-length rows that appear when a task took less than 5 minutes
-        if duration == 0:
-            continue
+                billed_amount = round(hourly_rate / 60 * rounded_duration, 2)
 
-        result.append(
-            {
-                "date": date_str,
-                "project": row["project"],
-                "description": row["description"],
-                "duration": duration,
-                "billed_amount": billed_amount,
-                "due_amount": 0 if "paid" in row["tags"] else billed_amount,
-            }
-        )
+                result.append(
+                    {
+                        "date": date_str,
+                        "project": project,
+                        "description": description,
+                        "duration": rounded_duration,
+                        "billed_amount": billed_amount,
+                        "due_amount": 0 if "paid" in row["tags"] else billed_amount,
+                    }
+                )
 
     return result
 
@@ -216,9 +175,7 @@ def api(toggl_client_id=None, client_name=None, action=None):
         return jsonify({"success": True})
 
     hourly_rate = TOGGL_CLIENTS[client_name]["hourly_rate"]
-    processed_time_entries = process_time_entries(
-        time_entries, hourly_rate, since, until
-    )
+    processed_time_entries = process_time_entries(time_entries, hourly_rate, until)
 
     return jsonify(processed_time_entries)
 
