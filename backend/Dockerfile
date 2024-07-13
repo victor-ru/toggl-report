@@ -1,4 +1,4 @@
-FROM python:3.9-slim-buster
+FROM --platform=linux/amd64 python:3.9-slim-buster
 # EXPOSE is ignored by heroku
 EXPOSE $PORT
 WORKDIR /usr/src/app
