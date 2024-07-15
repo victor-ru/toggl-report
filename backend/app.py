@@ -71,7 +71,7 @@ def get_time_entries(client_id, since, until):
 
 
 # prepares time entries to be displayed
-def process_time_entries(time_entries, hourly_rate, until):
+def process_time_entries(time_entries, hourly_rate, since, until):
     task_durations = {}
 
     for row in time_entries:
@@ -88,6 +88,10 @@ def process_time_entries(time_entries, hourly_rate, until):
         # skip rows that are out of the date range
         # i.e. made later than END_OF_NIGHT_HOUR of the next day after `until`
         if date_str > until and end_time.hour >= END_OF_NIGHT_HOUR:
+            continue
+
+        # skip rows that were made before END_OF_NIGHT_HOUR of the `since` day
+        if date_str < since and end_time.hour < END_OF_NIGHT_HOUR:
             continue
 
         task_durations.setdefault(date_str, {})
@@ -175,7 +179,9 @@ def api(toggl_client_id=None, client_name=None, action=None):
         return jsonify({"success": True})
 
     hourly_rate = TOGGL_CLIENTS[client_name]["hourly_rate"]
-    processed_time_entries = process_time_entries(time_entries, hourly_rate, until)
+    processed_time_entries = process_time_entries(
+        time_entries, hourly_rate, since, until
+    )
 
     return jsonify(processed_time_entries)
 
