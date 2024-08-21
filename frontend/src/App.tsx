@@ -93,6 +93,10 @@ export default function App() {
 
   useEffect(() => {
     loadTimeEntries();
+
+    // load every 20 seconds
+    const interval = setInterval(loadTimeEntries, 15000);
+    return () => clearInterval(interval);
   }, [loadTimeEntries]);
 
   const handleClickThisWeek = () => {
