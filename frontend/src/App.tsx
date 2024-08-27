@@ -82,9 +82,6 @@ export default function App() {
     const newUrl = `${window.location.pathname}?${searchParams.toString()}`;
     window.history.pushState(null, "", newUrl);
 
-    setTimeEntries([]);
-    setLoading(true);
-
     const url = `/api${pathname}`;
     const response = await axios.get(url, { params });
     setTimeEntries(response.data);
@@ -92,10 +89,12 @@ export default function App() {
   }, [since, until]);
 
   useEffect(() => {
+    setTimeEntries([]);
+    setLoading(true);
     loadTimeEntries();
 
     // load every 20 seconds
-    const interval = setInterval(loadTimeEntries, 15000);
+    const interval = setInterval(loadTimeEntries, 5000);
     return () => clearInterval(interval);
   }, [loadTimeEntries]);
 
