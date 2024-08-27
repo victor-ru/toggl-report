@@ -38,14 +38,6 @@ const columns: GridColDef[] = [
       return `$${params.value.toFixed(2)}`;
     },
   },
-  {
-    field: "due_amount",
-    headerName: "Due",
-    width: 80,
-    valueFormatter: (params: GridValueFormatterParams) => {
-      return `$${params.value.toFixed(2)}`;
-    },
-  },
 ];
 
 export function TimeTable({

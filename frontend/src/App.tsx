@@ -1,4 +1,3 @@
-import * as React from "react";
 import { Button, Container, Typography, Box } from "@mui/material";
 import { useEffect, useState, useCallback } from "react";
 import axios from "axios";
@@ -13,11 +12,9 @@ import {
   endOfDay,
   isEqual,
   parseISO,
-  endOfYesterday,
 } from "date-fns";
 import { DateRangePicker } from "./components/DateRangePicker";
 import { TimeTable, TimeEntry } from "./components/TimeTable";
-import { useConfirm } from "material-ui-confirm";
 
 // weeks start on monday
 const WEEK_START_DAY = 1;
@@ -60,8 +57,6 @@ export default function App() {
   const [since, setSince] = useState<Date>(initialSince);
   const [until, setUntil] = useState<Date>(initialUntil);
 
-  const confirm = useConfirm();
-
   const loadTimeEntries = useCallback(async () => {
     const pathname = window.location.pathname;
     if (pathname === "/") {
@@ -93,8 +88,8 @@ export default function App() {
     setLoading(true);
     loadTimeEntries();
 
-    // load every 20 seconds
-    const interval = setInterval(loadTimeEntries, 5000);
+    // load every 10 seconds
+    const interval = setInterval(loadTimeEntries, 10000);
     return () => clearInterval(interval);
   }, [loadTimeEntries]);
 
@@ -126,80 +121,6 @@ export default function App() {
     isEqual(since, thisMonthStart) && isEqual(until, thisMonthEnd);
   const lastMonthActive =
     isEqual(since, lastMonthStart) && isEqual(until, lastMonthEnd);
-
-  // if there are not time entries to be paid, the payment button will be disabled
-  const totalDue = timeEntries.reduce((res, row) => {
-    return res + row.due_amount;
-  }, 0);
-
-  // payments can only be made for dates before yesterday
-  // so that incomplete days are not marked as paid
-  const datesAllowPayment = since < until && until < endOfYesterday();
-
-  // payment button caption displays additional information below the button
-  let paymentButtonCaption = `Payment amount is $${totalDue.toFixed(2)}`;
-  if (totalDue === 0) {
-    paymentButtonCaption = "No payment required";
-  }
-  if (!datesAllowPayment) {
-    paymentButtonCaption = `Only dates before ${formatISO(endOfYesterday(), {
-      representation: "date",
-    })} can be marked as payed`;
-  }
-
-  // disabled the payment button if a payment cannot be made
-  const paymentButtonDisabled = totalDue === 0 || !datesAllowPayment || loading;
-
-  const handleClickPaymentButton = async () => {
-    const items = timeEntries
-      .filter((row) => row.due_amount > 0)
-      .map((row) => `${row.project}: ${row.description}`);
-    const uniqueItems = [...new Set(items)];
-
-    try {
-      await confirm({
-        description: (
-          <>
-            All the visible rows will be marked as paid
-            <br />
-            <br />
-            Description:
-            <br />
-            <code
-              style={{
-                display: "block",
-                padding: 10,
-                border: "1px solid #ccc",
-                borderRadius: 5,
-                backgroundColor: "whitesmoke",
-                maxHeight: 150,
-                overflow: "auto",
-                fontSize: 12,
-              }}
-            >
-              {uniqueItems.map((item, index) => (
-                <>
-                  - {item}
-                  <br />
-                </>
-              ))}
-            </code>
-            <br />
-            Total payment amount is <b>${totalDue.toFixed(2)}</b>
-          </>
-        ),
-      });
-
-      setTimeEntries([]);
-      setLoading(true);
-
-      const url = `/api${window.location.pathname}/set_paid${window.location.search}`;
-      await axios.post(url);
-      loadTimeEntries();
-    } catch (_) {
-      return;
-    }
-  };
 
   return (
     <Container maxWidth="md">
@@ -247,26 +168,6 @@ export default function App() {
           </Button>
         </Box>
         <TimeTable loading={loading} rows={timeEntries} />
-        <Box
-          sx={{
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-          }}
-        >
-          <Button
-            onClick={handleClickPaymentButton}
-            sx={{ mb: 1 }}
-            color="success"
-            variant="contained"
-            disabled={paymentButtonDisabled}
-          >
-            Mark All As Paid
-          </Button>
-          {!loading && (
-            <Typography variant="body2">{paymentButtonCaption}</Typography>
-          )}
-        </Box>
       </Box>
     </Container>
   );
