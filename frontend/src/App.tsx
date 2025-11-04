@@ -77,6 +77,7 @@ export default function App() {
     const newUrl = `${window.location.pathname}?${searchParams.toString()}`;
     window.history.pushState(null, "", newUrl);
 
+    setLoading(true);
     const url = `/api${pathname}`;
     const response = await axios.get(url, { params });
     setTimeEntries(response.data);
@@ -87,10 +88,6 @@ export default function App() {
     setTimeEntries([]);
     setLoading(true);
     loadTimeEntries();
-
-    // load every 10 seconds
-    const interval = setInterval(loadTimeEntries, 10000);
-    return () => clearInterval(interval);
   }, [loadTimeEntries]);
 
   const handleClickThisWeek = () => {
@@ -168,6 +165,17 @@ export default function App() {
           </Button>
         </Box>
         <TimeTable loading={loading} rows={timeEntries} />
+        <Box
+          sx={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+          }}
+        >
+          <Button onClick={loadTimeEntries} sx={{ mb: 1 }} variant="outlined">
+            Refresh
+          </Button>
+        </Box>
       </Box>
     </Container>
   );
