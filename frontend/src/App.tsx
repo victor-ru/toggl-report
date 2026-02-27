@@ -88,8 +88,8 @@ export default function App() {
     setLoading(true);
     loadTimeEntries();
 
-    // load every 5 minutes
-    const interval = setInterval(loadTimeEntries, 5 * 60 * 1000);
+    // load every 150 seconds (2.5 minutes)
+    const interval = setInterval(loadTimeEntries, 150 * 1000);
     return () => clearInterval(interval);
   }, [loadTimeEntries]);
 
