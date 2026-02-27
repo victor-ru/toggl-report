@@ -87,6 +87,10 @@ export default function App() {
     setTimeEntries([]);
     setLoading(true);
     loadTimeEntries();
+
+    // load every 5 minutes
+    const interval = setInterval(loadTimeEntries, 5 * 60 * 1000);
+    return () => clearInterval(interval);
   }, [loadTimeEntries]);
 
   const handleClickThisWeek = () => {
