@@ -88,8 +88,8 @@ export default function App() {
     setLoading(true);
     loadTimeEntries();
 
-    // load every 3 minutes
-    const interval = setInterval(loadTimeEntries, 3 * 60 * 1000);
+    // auto refresh
+    const interval = setInterval(loadTimeEntries, 5 * 60 * 1000);
     return () => clearInterval(interval);
   }, [loadTimeEntries]);
 
