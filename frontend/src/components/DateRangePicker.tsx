@@ -25,6 +25,7 @@ export function DateRangePicker({
       <DatePicker
         disableHighlightToday
         inputFormat="yyyy-MM-dd"
+        mask="____-__-__"
         open={sinceOpen}
         onOpen={() => setSinceOpen(true)}
         onClose={() => setSinceOpen(false)}
@@ -54,6 +55,7 @@ export function DateRangePicker({
       <DatePicker
         disableHighlightToday
         inputFormat="yyyy-MM-dd"
+        mask="____-__-__"
         open={untilOpen}
         onOpen={() => setUntilOpen(true)}
         onClose={() => setUntilOpen(false)}
