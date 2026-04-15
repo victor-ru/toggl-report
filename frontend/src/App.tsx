@@ -88,9 +88,22 @@ export default function App() {
     setLoading(true);
     loadTimeEntries();
 
-    // auto refresh
-    const interval = setInterval(loadTimeEntries, 5 * 60 * 1000);
-    return () => clearInterval(interval);
+    // auto refresh, only while the tab is visible
+    const interval = setInterval(() => {
+      if (document.visibilityState === "visible") {
+        loadTimeEntries();
+      }
+    }, 2 * 60 * 1000);
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        loadTimeEntries();
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
   }, [loadTimeEntries]);
 
   const handleClickThisWeek = () => {
