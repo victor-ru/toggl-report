@@ -96,6 +96,7 @@ export default function App() {
     }, 2 * 60 * 1000);
     const handleVisibilityChange = () => {
       if (document.visibilityState === "visible") {
+        setTimeEntries([]);
         setLoading(true);
         loadTimeEntries();
       }
