@@ -19,6 +19,9 @@ import { TimeTable, TimeEntry } from "./components/TimeTable";
 // weeks start on monday
 const WEEK_START_DAY = 1;
 
+// the Refresh button stays disabled for this long after the data is loaded
+const REFRESH_COOLDOWN_MS = 2 * 60 * 1000;
+
 export default function App() {
   const now = new Date();
   const thisWeekStart = startOfWeek(now, {
@@ -56,12 +59,16 @@ export default function App() {
   const [timeEntries, setTimeEntries] = useState<TimeEntry[]>([]);
   const [since, setSince] = useState<Date>(initialSince);
   const [until, setUntil] = useState<Date>(initialUntil);
+  const [lastRefreshAt, setLastRefreshAt] = useState<number | null>(null);
+  const [refreshDisabled, setRefreshDisabled] = useState<boolean>(false);
 
   const loadTimeEntries = useCallback(async () => {
     const pathname = window.location.pathname;
     if (pathname === "/") {
       return;
     }
+
+    setLastRefreshAt(Date.now());
 
     const params = {
       since: formatISO(since, {
@@ -88,12 +95,7 @@ export default function App() {
     setLoading(true);
     loadTimeEntries();
 
-    // auto refresh, only while the tab is visible
-    const interval = setInterval(() => {
-      if (document.visibilityState === "visible") {
-        loadTimeEntries();
-      }
-    }, 2 * 60 * 1000);
+    // reload when returning to the tab, so the data is fresh on focus
     const handleVisibilityChange = () => {
       if (document.visibilityState === "visible") {
         setTimeEntries([]);
@@ -103,10 +105,21 @@ export default function App() {
     };
     document.addEventListener("visibilitychange", handleVisibilityChange);
     return () => {
-      clearInterval(interval);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, [loadTimeEntries]);
+
+  // disable the Refresh button for a cooldown window after each load, then re-enable
+  useEffect(() => {
+    if (lastRefreshAt === null) {
+      return;
+    }
+    setRefreshDisabled(true);
+    const timeout = setTimeout(() => {
+      setRefreshDisabled(false);
+    }, REFRESH_COOLDOWN_MS);
+    return () => clearTimeout(timeout);
+  }, [lastRefreshAt]);
 
   const handleClickThisWeek = () => {
     setSince(thisWeekStart);
@@ -196,6 +209,7 @@ export default function App() {
               setLoading(true);
               loadTimeEntries();
             }}
+            disabled={refreshDisabled}
             sx={{ mb: 1 }}
             variant="outlined"
           >
