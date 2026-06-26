@@ -90,24 +90,29 @@ export default function App() {
     setLoading(false);
   }, [since, until]);
 
+  // reload whenever the selected date range changes
   useEffect(() => {
     setTimeEntries([]);
     setLoading(true);
     loadTimeEntries();
+  }, [loadTimeEntries]);
 
-    // reload when returning to the tab, so the data is fresh on focus
+  // reload when returning to the tab, unless still within the refresh cooldown,
+  // so tab focus can't refresh more often than the Refresh button allows
+  useEffect(() => {
     const handleVisibilityChange = () => {
-      if (document.visibilityState === "visible") {
-        setTimeEntries([]);
-        setLoading(true);
-        loadTimeEntries();
+      if (document.visibilityState !== "visible" || refreshDisabled) {
+        return;
       }
+      setTimeEntries([]);
+      setLoading(true);
+      loadTimeEntries();
     };
     document.addEventListener("visibilitychange", handleVisibilityChange);
     return () => {
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
-  }, [loadTimeEntries]);
+  }, [loadTimeEntries, refreshDisabled]);
 
   // disable the Refresh button for a cooldown window after each load, then re-enable
   useEffect(() => {
